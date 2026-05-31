@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPI CRM · Dauphine</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f9fa;--surface:#ffffff;--surface2:#f1f3f5;--border:#e5e7eb;--border2:#d1d5db;
+  --text:#111827;--text2:#6b7280;--text3:#9ca3af;
+  --blue:#2563EB;--blue-light:#EEF3FF;--blue-dark:#1D4ED8;
+  --green:#059669;--green-light:#D1FAE5;
+  --amber:#B45309;--amber-light:#FEF3C7;
+  --red:#DC2626;--red-light:#FEE2E2;
+  --purple:#7C3AED;--purple-light:#EDE9FE;
+  --navy:#0A1628;
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;background:var(--bg)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .org{font-size:11px;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.login-logo .title{font-size:26px;font-weight:600;color:var(--text)}
+.login-logo .sub{font-size:13px;color:var(--text2);margin-top:4px}
+.login-card{width:380px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.login-card h2{font-size:16px;font-weight:600;margin-bottom:20px;color:var(--text)}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px}
+.form-input{width:100%;padding:9px 12px;font-size:14px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none;transition:border .15s}
+.form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.form-select{width:100%;padding:9px 12px;font-size:14px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none}
+textarea.form-input{resize:vertical;min-height:80px}
+.err-msg{font-size:12px;color:var(--red);background:var(--red-light);padding:8px 12px;border-radius:var(--radius);margin-bottom:12px;display:none}
+.err-msg.show{display:block}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--radius);cursor:pointer;border:1px solid var(--border2);background:var(--surface);color:var(--text);text-decoration:none;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--surface2);border-color:var(--border2)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue-dark);border-color:var(--blue-dark)}
+.btn-danger{color:var(--red);border-color:#fca5a5}
+.btn-danger:hover{background:var(--red-light)}
+.btn-full{width:100%;justify-content:center}
+.btn svg{width:15px;height:15px;flex-shrink:0}
+
+/* APP SHELL */
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;width:220px;height:100vh;z-index:10}
+.sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-org{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.sidebar-name{font-size:15px;font-weight:600;color:#fff}
+.sidebar-badge{display:inline-block;font-size:10px;background:var(--blue);color:#fff;border-radius:4px;padding:1px 7px;margin-top:5px}
+.nav{padding:10px 0;flex:1;overflow-y:auto}
+.nav-section{padding:14px 18px 5px;font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:13px;color:rgba(255,255,255,.6);cursor:pointer;border-left:2px solid transparent;transition:all .15s;text-decoration:none}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,.05)}
+.nav-item.active{color:#fff;background:rgba(37,99,235,.25);border-left-color:var(--blue)}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:10px;background:rgba(37,99,235,.4);color:#93C5FD;border-radius:10px;padding:1px 7px}
+.sidebar-user{padding:12px 18px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;color:#fff;flex-shrink:0;background:var(--blue)}
+.avatar-sm{width:28px;height:28px;font-size:10px}
+.avatar-md{width:36px;height:36px;font-size:13px}
+.avatar-lg{width:44px;height:44px;font-size:15px}
+.user-name{font-size:12px;color:#fff;font-weight:500}
+.user-role{font-size:10px;color:rgba(255,255,255,.4)}
+
+/* MAIN */
+.main{margin-left:220px;display:flex;flex-direction:column;min-height:100vh}
+.topbar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);position:sticky;top:0;z-index:5}
+.topbar-title{font-size:16px;font-weight:600;color:var(--text);flex:1}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text3);pointer-events:none}
+.search-input{padding:7px 12px 7px 32px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);outline:none;width:240px}
+.search-input:focus{border-color:var(--blue);background:var(--surface)}
+.content{padding:24px;flex:1}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface2);border-radius:var(--radius);padding:16px}
+.stat-label{font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.stat-value{font-size:24px;font-weight:700;color:var(--text)}
+.stat-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.stat-sub .pos{color:var(--green)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
+.badge-gray{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.badge-blue{background:#DBEAFE;color:#1E40AF}
+.badge-green{background:var(--green-light);color:#065F46}
+.badge-amber{background:var(--amber-light);color:#92400E}
+.badge-red{background:var(--red-light);color:#991B1B}
+.badge-purple{background:var(--purple-light);color:#5B21B6}
+
+/* TABLE */
+.table-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:11px;font-weight:600;color:var(--text2);padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+tbody td{padding:11px 14px;vertical-align:middle}
+
+/* FILTERS */
+.filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
+.filter-btn:hover{border-color:var(--border2);color:var(--text)}
+.filter-btn.active{background:var(--blue-light);color:var(--blue);border-color:#BFDBFE;font-weight:500}
+
+/* KANBAN */
+.kanban{display:grid;gap:10px}
+.kanban-col{background:var(--surface2);border-radius:var(--radius);padding:12px;min-height:120px}
+.kanban-col-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.05em}
+.kanban-count{background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:10px;padding:1px 7px;font-size:10px}
+.kanban-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s}
+.kanban-card:hover{border-color:var(--blue);box-shadow:0 1px 4px rgba(37,99,235,.1)}
+.kanban-card-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px}
+.kanban-card-sub{font-size:11px;color:var(--text3)}
+
+/* CARDS GRID */
+.cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;cursor:pointer;transition:all .15s}
+.card:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+
+/* DETAIL */
+.detail-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+.detail-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;margin-bottom:14px}
+.detail-section-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.detail-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.detail-row:last-child{border-bottom:none}
+.detail-key{font-size:12px;color:var(--text2);flex-shrink:0}
+.detail-val{font-size:12px;color:var(--text);font-weight:500;text-align:right}
+
+/* TIMELINE */
+.timeline{display:flex;flex-direction:column;gap:0}
+.timeline-item{display:flex;gap:12px;padding-bottom:14px;position:relative}
+.timeline-item:not(:last-child)::before{content:'';position:absolute;left:5px;top:14px;bottom:0;width:1px;background:var(--border)}
+.timeline-dot{width:11px;height:11px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:3px;border:2px solid var(--surface)}
+.timeline-dot.gray{background:var(--border2)}
+.timeline-body{flex:1}
+.timeline-text{font-size:12px;color:var(--text);line-height:1.5}
+.timeline-date{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* PROGRESS */
+.progress-bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:4px}
+.progress-fill{height:100%;background:var(--blue);border-radius:3px;transition:width .4s}
+.pipeline-steps{display:flex;gap:3px;margin-bottom:4px}
+.pipeline-step{flex:1;height:4px;border-radius:2px}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:28px;width:520px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-title{font-size:16px;font-weight:600;color:var(--text)}
+.modal-close{cursor:pointer;color:var(--text3);padding:4px;border-radius:4px;line-height:1;border:none;background:none;font-size:18px}
+.modal-close:hover{color:var(--text);background:var(--surface2)}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group.full{grid-column:1/-1}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;color:var(--text3);font-size:13px;gap:10px}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty svg{width:40px;height:40px;margin:0 auto 12px;display:block;opacity:.4}
+.empty p{font-size:13px}
+
+/* VIEW TOGGLE */
+.view-toggle{display:flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;margin-left:auto}
+.view-btn{padding:6px 10px;font-size:12px;cursor:pointer;background:var(--surface);color:var(--text2);border:none;display:flex;align-items:center}
+.view-btn:hover{background:var(--surface2)}
+.view-btn.active{background:var(--blue);color:#fff}
+.view-btn svg{width:14px;height:14px}
+
+/* AVATAR STACK */
+.avatar-stack{display:flex}
+.avatar-stack .avatar{border:2px solid var(--surface);margin-left:-8px}
+.avatar-stack .avatar:first-child{margin-left:0}
+
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+
+/* TEAM GRID */
+.team-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.team-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:flex;gap:14px;align-items:flex-start}
+
+/* NOTIFICATION */
+.toast{position:fixed;bottom:20px;right:20px;background:#1f2937;color:#fff;padding:12px 18px;border-radius:var(--radius);font-size:13px;z-index:1000;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.error{background:#991b1b}
+</style>
+</head>
+<body>
+
+<!-- CONFIG — remplace par tes vraies clés Supabase -->
+<script>
+const SUPABASE_URL = 'https://aiymmsffhyelitpvatcf.supabase.co'; // ex: https://xxxx.supabase.co
+const SUPABASE_KEY = 'sb_publishable_4qD6NIvQYn58eZm7WzX0Sw_vql3-uAe'; // clé anon publique
+
+// Mot de passe CRM (simple, partagé à l'équipe)
+const APP_PASSWORD = 'spi2025';
+</script>
+
+<div id="loginPage">
+  <div class="login-wrap">
+    <div class="login-logo">
+      <div class="org">Université Paris Dauphine – PSL</div>
+      <div class="title">SPI CRM</div>
+      <div class="sub">Suivi des démarches partenariales</div>
+    </div>
+    <div class="login-card">
+      <h2>Connexion</h2>
+      <div class="err-msg" id="loginErr">Email ou mot de passe incorrect.</div>
+      <div class="form-group">
+        <label class="form-label">Adresse email</label>
+        <input class="form-input" type="email" id="loginEmail" placeholder="prenom.nom@dauphine.eu" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input class="form-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary btn-full" id="loginBtn" onclick="doLogin()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+        Se connecter
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="appPage" style="display:none">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-org">SPI · Dauphine</div>
+        <div class="sidebar-name">CRM Partenariats</div>
+        <div class="sidebar-badge" id="sideRoleBadge">Admin</div>
+      </div>
+      <nav class="nav">
+        <div class="nav-section">Principal</div>
+        <a class="nav-item active" id="nav-dashboard" onclick="nav('dashboard')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          Tableau de bord
+        </a>
+        <a class="nav-item" id="nav-prospects" onclick="nav('prospects')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          Entreprises
+          <span class="nav-badge" id="badgeProspects">—</span>
+        </a>
+        <a class="nav-item" id="nav-events" onclick="nav('events')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Événements
+          <span class="nav-badge" id="badgeEvents">—</span>
+        </a>
+        <a class="nav-item" id="nav-sponsors" onclick="nav('sponsors')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Sponsorings
+          <span class="nav-badge" id="badgeSponsors">—</span>
+        </a>
+        <div class="nav-section">Gestion</div>
+        <a class="nav-item" id="nav-team" onclick="nav('team')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Équipe
+        </a>
+      </nav>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="sideAvatar">EL</div>
+        <div>
+          <div class="user-name" id="sideUserName">Chargement...</div>
+          <div class="user-role" id="sideUserRole">—</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-title" id="topTitle">Tableau de bord</div>
+        <div class="search-wrap">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input class="search-input" id="searchInput" placeholder="Rechercher..." oninput="onSearch(this.value)">
+        </div>
+        <div id="topActions"></div>
+        <button class="btn" onclick="doLogout()" title="Se déconnecter">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      </div>
+      <div class="content" id="content">
+        <div class="loading"><div class="spinner"></div> Chargement...</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Nouveau</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" id="modalSaveBtn">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── INIT SUPABASE ───────────────────────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let currentUser = null;
+let currentView = 'dashboard';
+let currentFilter = 'all';
+let currentSubTab = 'list';
+let cache = { team: [], prospects: [], events: [], sponsors: [], actions: [] };
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const statusLabels = {
+  new:'Nouveau', contacted:'Contacté', qualified:'Qualifié', negotiation:'Négociation',
+  'closed-won':'Signé', 'closed-lost':'Perdu',
+  planned:'Planifié', ongoing:'En cours', done:'Terminé', cancelled:'Annulé',
+  contact:'Contact', proposal:'Proposition', signed:'Signé', lost:'Perdu'
+};
+const statusBadge = {
+  new:'badge-gray', contacted:'badge-blue', qualified:'badge-purple', negotiation:'badge-amber',
+  'closed-won':'badge-green', 'closed-lost':'badge-red',
+  planned:'badge-blue', ongoing:'badge-amber', done:'badge-green', cancelled:'badge-red',
+  contact:'badge-gray', proposal:'badge-blue', signed:'badge-green', lost:'badge-red'
+};
+const packageColors = { Platinum:'badge-purple', Gold:'badge-amber', Silver:'badge-gray', Bronze:'badge-blue' };
+
+function badge(status) {
+  return `<span class="badge ${statusBadge[status]||'badge-gray'}">${statusLabels[status]||status}</span>`;
+}
+function pkgBadge(p) {
+  return `<span class="badge ${packageColors[p]||'badge-gray'}">${p}</span>`;
+}
+function memberAvatar(m, size='sm') {
+  if (!m) return `<div class="avatar avatar-${size}" style="background:#9ca3af">?</div>`;
+  return `<div class="avatar avatar-${size}" style="background:${m.color||'#2563EB'}" title="${m.name}">${m.initials||m.name.slice(0,2).toUpperCase()}</div>`;
+}
+function memberByInitials(init) { return cache.team.find(t => t.initials === init); }
+function memberById(id) { return cache.team.find(t => t.id === id); }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('fr-FR'); }
+function fmtAmt(n) { return (n||0).toLocaleString('fr-FR') + ' €'; }
+
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (err ? ' error' : '');
+  setTimeout(() => el.className = 'toast', 3000);
+}
+
+// ─── AUTH ────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginErr');
+  const btn = document.getElementById('loginBtn');
+
+  if (pass !== APP_PASSWORD) { err.classList.add('show'); return; }
+  if (!email) { err.classList.add('show'); return; }
+
+  btn.disabled = true; btn.textContent = 'Connexion...';
+  err.classList.remove('show');
+
+  const { data, error } = await sb.from('team').select('*').eq('email', email).maybeSingle();
+  if (error || !data) {
+    err.textContent = 'Email non trouvé dans l\'équipe SPI.';
+    err.classList.add('show');
+    btn.disabled = false; btn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg> Se connecter';
+    return;
+  }
+
+  currentUser = data;
+  sessionStorage.setItem('spi_user', JSON.stringify(data));
+  showApp();
+}
+
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+function doLogout() {
+  sessionStorage.removeItem('spi_user');
+  currentUser = null;
+  document.getElementById('appPage').style.display = 'none';
+  document.getElementById('loginPage').style.display = '';
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+function showApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('appPage').style.display = '';
+
+  const u = currentUser;
+  document.getElementById('sideAvatar').textContent = u.initials || u.name.slice(0,2).toUpperCase();
+  document.getElementById('sideAvatar').style.background = u.color || '#2563EB';
+  document.getElementById('sideUserName').textContent = u.name;
+  document.getElementById('sideUserRole').textContent = u.role === 'admin' ? 'Administrateur·rice' : 'Membre';
+  document.getElementById('sideRoleBadge').textContent = u.role === 'admin' ? 'Admin' : 'Membre';
+
+  if (u.role !== 'admin') {
+    document.getElementById('nav-team').style.opacity = '.4';
+    document.getElementById('nav-team').style.pointerEvents = 'none';
+  }
+  nav('dashboard');
+}
+
+// Check existing session
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('spi_user');
+  if (saved) {
+    try { currentUser = JSON.parse(saved); showApp(); } catch(e) {}
+  }
+});
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function nav(view) {
+  currentView = view;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const ni = document.getElementById('nav-' + view);
+  if (ni) ni.classList.add('active');
+
+  const titles = { dashboard:'Tableau de bord', prospects:'Entreprises & Prospects', events:'Événements', sponsors:'Sponsorings', team:'Équipe' };
+  document.getElementById('topTitle').textContent = titles[view] || view;
+
+  const isAdmin = currentUser?.role === 'admin';
+  const actions = {
+    prospects: `<button class="btn btn-primary" onclick="openModal('prospect')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Ajouter</button>`,
+    events: `<button class="btn btn-primary" onclick="openModal('event')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Créer</button>`,
+    sponsors: `<button class="btn btn-primary" onclick="openModal('sponsor')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Ajouter</button>`,
+    team: isAdmin ? `<button class="btn btn-primary" onclick="openModal('member')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Inviter</button>` : '',
+    dashboard: ''
+  };
+  document.getElementById('topActions').innerHTML = actions[view] || '';
+  document.getElementById('searchInput').value = '';
+
+  loadView(view);
+}
+
+async function loadView(view) {
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div> Chargement...</div>';
+  await loadCache(view);
+  if (view === 'dashboard') renderDashboard(c);
+  else if (view === 'prospects') renderProspects(c);
+  else if (view === 'events') renderEvents(c);
+  else if (view === 'sponsors') renderSponsors(c);
+  else if (view === 'team') renderTeam(c);
+}
+
+async function loadCache(view) {
+  const [team] = await Promise.all([sb.from('team').select('*').order('name')]);
+  cache.team = team.data || [];
+
+  if (view === 'dashboard' || view === 'prospects') {
+    const r = await sb.from('prospects').select('*, assignee:assignee_id(*)').order('created_at', { ascending: false });
+    cache.prospects = r.data || [];
+  }
+  if (view === 'dashboard' || view === 'events') {
+    const r = await sb.from('events').select('*').order('date');
+    cache.events = r.data || [];
+  }
+  if (view === 'dashboard' || view === 'sponsors') {
+    const r = await sb.from('sponsors').select('*, prospect:prospect_id(*), assignee:assignee_id(*)').order('created_at', { ascending: false });
+    cache.sponsors = r.data || [];
+  }
+  // Update nav badges
+  document.getElementById('badgeProspects').textContent = cache.prospects.length || '—';
+  document.getElementById('badgeEvents').textContent = cache.events.length || '—';
+  document.getElementById('badgeSponsors').textContent = cache.sponsors.length || '—';
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+function renderDashboard(c) {
+  const won = cache.prospects.filter(p => p.status === 'closed-won').length;
+  const inPipe = cache.prospects.filter(p => !['closed-won','closed-lost'].includes(p.status)).length;
+  const totalSigned = cache.sponsors.filter(s => s.status === 'signed').reduce((a,b) => a + (b.amount||0), 0);
+  const totalPipe = cache.sponsors.filter(s => !['signed','lost'].includes(s.status)).reduce((a,b) => a + (b.amount||0), 0);
+  const upcoming = cache.events.filter(e => e.status !== 'done' && e.status !== 'cancelled');
+
+  c.innerHTML = `
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Entreprises suivies</div><div class="stat-value">${cache.prospects.length}</div><div class="stat-sub"><span class="pos">${inPipe} en pipeline</span></div></div>
+    <div class="stat-card"><div class="stat-label">Partenaires signés</div><div class="stat-value">${won}</div><div class="stat-sub">${cache.sponsors.filter(s=>s.status==='signed').length} contrats actifs</div></div>
+    <div class="stat-card"><div class="stat-label">Budget sécurisé</div><div class="stat-value">${fmtAmt(totalSigned)}</div><div class="stat-sub"><span class="pos">${fmtAmt(totalPipe)} en négociation</span></div></div>
+    <div class="stat-card"><div class="stat-label">Événements</div><div class="stat-value">${cache.events.length}</div><div class="stat-sub">${upcoming.length} à venir</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px">
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Pipeline prospects</div>
+        <button class="btn" style="font-size:12px" onclick="nav('prospects')">Voir tout →</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        ${['new','contacted','qualified','negotiation'].map(st => `
+        <div class="kanban-col">
+          <div class="kanban-col-title">${statusLabels[st]}<span class="kanban-count">${cache.prospects.filter(p=>p.status===st).length}</span></div>
+          ${cache.prospects.filter(p=>p.status===st).slice(0,4).map(p=>`
+          <div class="kanban-card" onclick="showProspect('${p.id}')">
+            <div class="kanban-card-name">${p.name}</div>
+            <div class="kanban-card-sub">${p.sector||''}</div>
+          </div>`).join('')}
+        </div>`).join('')}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px">Prochains événements</div>
+      ${upcoming.slice(0,4).map(ev => `
+      <div class="card" style="padding:12px;margin-bottom:8px;display:flex;gap:10px;align-items:center" onclick="nav('events')">
+        <div style="width:38px;height:38px;background:var(--surface2);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border)">
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase">${ev.date?['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][new Date(ev.date).getMonth()]:''}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1">${ev.date?new Date(ev.date).getDate():''}</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.name}</div>
+          <div style="font-size:11px;color:var(--text3)">${ev.location||''}</div>
+        </div>
+        ${badge(ev.status)}
+      </div>`).join('') || '<div style="font-size:13px;color:var(--text3)">Aucun événement à venir</div>'}
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin:16px 0 10px">Sponsorings récents</div>
+      ${cache.sponsors.slice(0,5).map(s => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div>
+          <div style="font-weight:600;color:var(--text)">${s.prospect?.name||'—'}</div>
+          ${pkgBadge(s.package)}
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:600">${fmtAmt(s.amount)}</div>
+          ${badge(s.status)}
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ─── PROSPECTS ───────────────────────────────────────────────────────────────
+function renderProspects(c, data) {
+  const prospects = data || cache.prospects;
+  const counts = {};
+  ['all','new','contacted','qualified','negotiation','closed-won','closed-lost'].forEach(s => {
+    counts[s] = s === 'all' ? prospects.length : prospects.filter(p=>p.status===s).length;
+  });
+  const filtered = currentFilter === 'all' ? prospects : prospects.filter(p => p.status === currentFilter);
+
+  c.innerHTML = `
+  <div class="filters">
+    ${Object.entries({all:'Tous',new:'Nouveaux',contacted:'Contactés',qualified:'Qualifiés',negotiation:'Négociation','closed-won':'Signés','closed-lost':'Perdus'}).map(([k,l])=>
+      `<button class="filter-btn${currentFilter===k?' active':''}" onclick="setFilter('${k}')">${l} (${counts[k]})</button>`
+    ).join('')}
+    <div class="view-toggle">
+      <button class="view-btn${currentSubTab==='list'?' active':''}" onclick="setSubTab('list')" title="Vue liste"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg></button>
+      <button class="view-btn${currentSubTab==='kanban'?' active':''}" onclick="setSubTab('kanban')" title="Vue kanban"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg></button>
+    </div>
+  </div>
+  ${currentSubTab === 'list' ? renderProspectTable(filtered) : renderProspectKanban(filtered)}`;
+}
+
+function renderProspectTable(list) {
+  if (!list.length) return `<div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/></svg><p>Aucune entreprise trouvée</p></div>`;
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Entreprise</th><th>Secteur</th><th>Contact</th><th>Statut</th><th>Source</th><th>Responsable</th><th>Dernière action</th></tr></thead>
+    <tbody>${list.map(p=>`<tr onclick="showProspect('${p.id}')">
+      <td><strong>${p.name}</strong></td>
+      <td style="color:var(--text2)">${p.sector||'—'}</td>
+      <td>${p.contact||'—'}</td>
+      <td>${badge(p.status)}</td>
+      <td style="color:var(--text2)">${p.source||'—'}</td>
+      <td>${memberAvatar(p.assignee)}</td>
+      <td style="color:var(--text2)">${fmtDate(p.last_action_at)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderProspectKanban(list) {
+  return `<div class="kanban" style="grid-template-columns:repeat(6,1fr)">
+    ${['new','contacted','qualified','negotiation','closed-won','closed-lost'].map(st=>`
+    <div class="kanban-col">
+      <div class="kanban-col-title">${statusLabels[st]}<span class="kanban-count">${list.filter(p=>p.status===st).length}</span></div>
+      ${list.filter(p=>p.status===st).map(p=>`<div class="kanban-card" onclick="showProspect('${p.id}')">
+        <div class="kanban-card-name">${p.name}</div>
+        <div class="kanban-card-sub">${p.sector||''}</div>
+      </div>`).join('')}
+    </div>`).join('')}
+  </div>`;
+}
+
+function setFilter(f) { currentFilter = f; renderProspects(document.getElementById('content')); }
+function setSubTab(t) { currentSubTab = t; renderProspects(document.getElementById('content')); }
+
+async function showProspect(id) {
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div> Chargement...</div>';
+
+  const [pr, ar] = await Promise.all([
+    sb.from('prospects').select('*, assignee:assignee_id(*)').eq('id', id).single(),
+    sb.from('actions').select('*, author:author_id(*)').eq('prospect_id', id).order('created_at', {ascending:false})
+  ]);
+  const p = pr.data; const actions = ar.data || [];
+  if (!p) { nav('prospects'); return; }
+
+  const isAdmin = currentUser?.role === 'admin';
+  const steps = ['new','contacted','qualified','negotiation','closed-won'];
+  const curIdx = steps.indexOf(p.status);
+
+  c.innerHTML = `
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+    <button class="btn" onclick="nav('prospects')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Retour</button>
+    <h1 style="font-size:18px;font-weight:700;flex:1">${p.name}</h1>
+    ${isAdmin ? `
+    <button class="btn" onclick="editProspect('${p.id}')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Modifier</button>
+    <button class="btn btn-danger" onclick="deleteProspect('${p.id}')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
+    ${badge(p.status)}
+  </div>
+  <div class="detail-grid">
+    <div>
+      <div class="detail-section">
+        <div class="detail-section-title">Informations</div>
+        <div class="detail-row"><span class="detail-key">Secteur</span><span class="detail-val">${p.sector||'—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Contact</span><span class="detail-val">${p.contact||'—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Email</span><span class="detail-val" style="color:var(--blue)">${p.email||'—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Téléphone</span><span class="detail-val">${p.phone||'—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Source</span><span class="detail-val">${p.source||'—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Responsable</span><span class="detail-val">${p.assignee?.name||'—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Ajouté le</span><span class="detail-val">${fmtDate(p.created_at)}</span></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">Notes</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6">${p.notes||'<span style="color:var(--text3)">Aucune note</span>'}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="addAction('${p.id}')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Ajouter une action</button>
+        <button class="btn" onclick="changeStatus('${p.id}','${p.status}')">Changer statut</button>
+      </div>
+    </div>
+    <div>
+      <div class="detail-section">
+        <div class="detail-section-title">Avancement pipeline</div>
+        <div class="pipeline-steps">
+          ${steps.map((st,i) => `<div class="pipeline-step" style="background:${i<=curIdx && p.status!=='closed-lost'?'var(--blue)':'var(--border)'}"></div>`).join('')}
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:4px">
+          ${steps.map(s => `<span>${statusLabels[s]}</span>`).join('')}
+        </div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">Historique des actions</div>
+        ${actions.length ? `<div class="timeline">
+          ${actions.map(a=>`<div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-body">
+              <div class="timeline-text"><strong>${a.type||'Action'}</strong>${a.note?` — ${a.note}`:''}</div>
+              <div class="timeline-date">${fmtDate(a.created_at)} · ${a.author?.name||'—'}</div>
+            </div>
+          </div>`).join('')}
+          <div class="timeline-item">
+            <div class="timeline-dot gray"></div>
+            <div class="timeline-body">
+              <div class="timeline-text">Prospect ajouté</div>
+              <div class="timeline-date">${fmtDate(p.created_at)} · Source : ${p.source||'—'}</div>
+            </div>
+          </div>
+        </div>` : '<div style="font-size:13px;color:var(--text3)">Aucune action enregistrée</div>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── EVENTS ──────────────────────────────────────────────────────────────────
+function renderEvents(c) {
+  if (!cache.events.length) {
+    c.innerHTML = `<div class="empty"><p>Aucun événement</p></div>`;
+    return;
+  }
+  c.innerHTML = `<div class="cards-grid">${cache.events.map(ev => `
+  <div class="card" onclick="showEvent('${ev.id}')">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">${ev.type||''} · ${ev.date||''}</div>
+        <div style="font-size:15px;font-weight:700">${ev.name}</div>
+      </div>
+      ${badge(ev.status)}
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;display:flex;align-items:center;gap:5px">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+      ${ev.location||'—'}
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">
+      <span>Budget : <strong style="color:var(--text)">${fmtAmt(ev.budget)}</strong></span>
+      <span>${ev.attendees||0} pers. cible</span>
+    </div>
+  </div>`).join('')}</div>`;
+}
+
+async function showEvent(id) {
+  const c = document.getElementById('content');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div> Chargement...</div>';
+  const { data: ev } = await sb.from('events').select('*').eq('id', id).single();
+  if (!ev) { nav('events'); return; }
+
+  c.innerHTML = `
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+    <button class="btn" onclick="nav('events')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Retour</button>
+    <h1 style="font-size:18px;font-weight:700;flex:1">${ev.name}</h1>
+    ${badge(ev.status)}
+  </div>
+  <div class="detail-grid">
+    <div>
+      <div class="detail-section">
+        <div class="detail-section-title">Détails</div>
+        <div class="detail-row"><span class="detail-key">Type</span><span class="detail-val">${ev.type||'—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Date</span><span class="detail-val">${fmtDate(ev.date)}</span></div>
+        <div class="detail-row"><span class="detail-key">Lieu</span><span class="detail-val">${ev.location||'—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Budget</span><span class="detail-val">${fmtAmt(ev.budget)}</span></div>
+        <div class="detail-row"><span class="detail-key">Participants cible</span><span class="detail-val">${ev.attendees||0}</span></div>
+        <div class="detail-row"><span class="detail-key">Inscrits</span><span class="detail-val">${ev.registered||0}</span></div>
+      </div>
+      ${ev.description ? `<div class="detail-section"><div class="detail-section-title">Description</div><div style="font-size:13px;line-height:1.6">${ev.description}</div></div>` : ''}
+    </div>
+    <div>
+      <div class="detail-section">
+        <div class="detail-section-title">Statut de l'événement</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${['planned','ongoing','done','cancelled'].map(s=>
+            `<button class="btn${ev.status===s?' btn-primary':''}" onclick="updateEventStatus('${ev.id}','${s}')">${statusLabels[s]}</button>`
+          ).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function updateEventStatus(id, status) {
+  await sb.from('events').update({ status }).eq('id', id);
+  toast('Statut mis à jour');
+  showEvent(id);
+}
+
+// ─── SPONSORS ────────────────────────────────────────────────────────────────
+function renderSponsors(c) {
+  const total = cache.sponsors.filter(s=>s.status==='signed').reduce((a,b)=>a+(b.amount||0),0);
+  const pipe = cache.sponsors.filter(s=>!['signed','lost'].includes(s.status)).reduce((a,b)=>a+(b.amount||0),0);
+  const pct = Math.min(100, Math.round(total/30000*100));
+
+  c.innerHTML = `
+  <div class="kpi-row">
+    <div class="stat-card"><div class="stat-label">Budget sécurisé</div><div class="stat-value">${fmtAmt(total)}</div><div class="stat-sub">${cache.sponsors.filter(s=>s.status==='signed').length} contrat(s)</div></div>
+    <div class="stat-card"><div class="stat-label">Pipeline</div><div class="stat-value">${fmtAmt(pipe)}</div><div class="stat-sub">${cache.sponsors.filter(s=>!['signed','lost'].includes(s.status)).length} en cours</div></div>
+    <div class="stat-card"><div class="stat-label">Objectif 2025</div><div class="stat-value">${pct} %</div><div class="stat-sub">Objectif : 30 000 €</div></div>
+  </div>
+  <div style="margin-bottom:18px">
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:4px"><span>0 €</span><span>30 000 €</span></div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Entreprise</th><th>Package</th><th>Montant</th><th>Statut</th><th>Livrables</th><th>Responsable</th><th>Notes</th></tr></thead>
+    <tbody>${cache.sponsors.map(s=>`<tr>
+      <td><strong>${s.prospect?.name||'—'}</strong></td>
+      <td>${pkgBadge(s.package)}</td>
+      <td style="font-weight:600">${fmtAmt(s.amount)}</td>
+      <td>${badge(s.status)}</td>
+      <td style="font-size:12px;color:var(--text2)">${(s.deliverables||[]).join(', ')||'—'}</td>
+      <td>${memberAvatar(s.assignee)}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.notes||'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+// ─── TEAM ────────────────────────────────────────────────────────────────────
+function renderTeam(c) {
+  c.innerHTML = `<div class="team-grid">${cache.team.map(m=>`
+  <div class="team-card">
+    <div class="avatar avatar-lg" style="background:${m.color||'#2563EB'}">${m.initials||m.name.slice(0,2).toUpperCase()}</div>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:700">${m.name}</div>
+      <div style="font-size:12px;color:var(--text2);margin:2px 0">${m.poste||'—'}</div>
+      <div style="font-size:12px;color:var(--text3)">${m.email}</div>
+      <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+        <span class="badge ${m.role==='admin'?'badge-purple':'badge-gray'}">${m.role==='admin'?'Admin':'Membre'}</span>
+        ${currentUser?.role==='admin'?`<button class="btn" style="font-size:11px;padding:2px 8px" onclick="editMember('${m.id}')">Modifier</button>`:''}
+      </div>
+    </div>
+  </div>`).join('')}</div>`;
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+function openModal(type, prefill={}) {
+  const titles = { prospect:'Nouvelle entreprise', event:'Nouvel événement', sponsor:'Nouveau sponsoring', member:'Inviter un membre' };
+  document.getElementById('modalTitle').textContent = prefill._editTitle || titles[type] || 'Nouveau';
+  document.getElementById('modalOverlay').classList.add('show');
+
+  const teamOptions = cache.team.map(t => `<option value="${t.id}" ${prefill.assignee_id===t.id?'selected':''}>${t.name}</option>`).join('');
+  const prospectOptions = cache.prospects.map(p => `<option value="${p.id}" ${prefill.prospect_id===p.id?'selected':''}>${p.name}</option>`).join('');
+
+  let body = '';
+  let onSave;
+
+  if (type === 'prospect') {
+    body = `<div class="form-grid">
+      <div class="form-group"><label class="form-label">Nom de l'entreprise *</label><input class="form-input" id="f-name" value="${prefill.name||''}" placeholder="BNP Paribas"></div>
+      <div class="form-group"><label class="form-label">Secteur</label><input class="form-input" id="f-sector" value="${prefill.sector||''}" placeholder="Finance"></div>
+      <div class="form-group"><label class="form-label">Contact</label><input class="form-input" id="f-contact" value="${prefill.contact||''}" placeholder="Prénom Nom"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="f-email" type="email" value="${prefill.email||''}"></div>
+      <div class="form-group"><label class="form-label">Téléphone</label><input class="form-input" id="f-phone" value="${prefill.phone||''}" placeholder="01 XX XX XX XX"></div>
+      <div class="form-group"><label class="form-label">Source</label>
+        <select class="form-select" id="f-source">${['Forum','LinkedIn','Alumni','Démarchage','Autre'].map(s=>`<option ${prefill.source===s?'selected':''}>${s}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Statut</label>
+        <select class="form-select" id="f-status">${Object.entries({new:'Nouveau',contacted:'Contacté',qualified:'Qualifié',negotiation:'Négociation','closed-won':'Signé','closed-lost':'Perdu'}).map(([v,l])=>`<option value="${v}" ${prefill.status===v?'selected':''}>${l}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Responsable</label><select class="form-select" id="f-assignee">${teamOptions}</select></div>
+      <div class="form-group full"><label class="form-label">Notes</label><textarea class="form-input" id="f-notes" rows="3">${prefill.notes||''}</textarea></div>
+    </div>`;
+    onSave = () => saveProspect(prefill.id);
+  } else if (type === 'event') {
+    body = `<div class="form-grid">
+      <div class="form-group full"><label class="form-label">Nom de l'événement *</label><input class="form-input" id="f-name" value="${prefill.name||''}"></div>
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="f-date" type="date" value="${prefill.date||''}"></div>
+      <div class="form-group"><label class="form-label">Type</label>
+        <select class="form-select" id="f-type">${['forum','soiree','atelier','gala','autre'].map(t=>`<option value="${t}" ${prefill.type===t?'selected':''}>${{forum:'Forum',soiree:'Soirée',atelier:'Atelier',gala:'Gala',autre:'Autre'}[t]}</option>`).join('')}</select>
+      </div>
+      <div class="form-group full"><label class="form-label">Lieu</label><input class="form-input" id="f-location" value="${prefill.location||''}"></div>
+      <div class="form-group"><label class="form-label">Budget (€)</label><input class="form-input" id="f-budget" type="number" value="${prefill.budget||0}"></div>
+      <div class="form-group"><label class="form-label">Participants cible</label><input class="form-input" id="f-attendees" type="number" value="${prefill.attendees||0}"></div>
+      <div class="form-group full"><label class="form-label">Description</label><textarea class="form-input" id="f-desc" rows="2">${prefill.description||''}</textarea></div>
+    </div>`;
+    onSave = () => saveEvent(prefill.id);
+  } else if (type === 'sponsor') {
+    body = `<div class="form-grid">
+      <div class="form-group"><label class="form-label">Entreprise *</label><select class="form-select" id="f-prospect">${prospectOptions}</select></div>
+      <div class="form-group"><label class="form-label">Package</label>
+        <select class="form-select" id="f-package">${['Platinum','Gold','Silver','Bronze'].map(p=>`<option ${prefill.package===p?'selected':''}>${p}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Montant (€)</label><input class="form-input" id="f-amount" type="number" value="${prefill.amount||0}"></div>
+      <div class="form-group"><label class="form-label">Statut</label>
+        <select class="form-select" id="f-status">${Object.entries({contact:'Contact',proposal:'Proposition',negotiation:'Négociation',signed:'Signé',lost:'Perdu'}).map(([v,l])=>`<option value="${v}" ${prefill.status===v?'selected':''}>${l}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Responsable</label><select class="form-select" id="f-assignee">${teamOptions}</select></div>
+      <div class="form-group full"><label class="form-label">Notes</label><textarea class="form-input" id="f-notes" rows="2">${prefill.notes||''}</textarea></div>
+    </div>`;
+    onSave = () => saveSponsor(prefill.id);
+  } else if (type === 'member') {
+    body = `<div class="form-grid">
+      <div class="form-group"><label class="form-label">Prénom Nom *</label><input class="form-input" id="f-name" value="${prefill.name||''}"></div>
+      <div class="form-group"><label class="form-label">Poste</label><input class="form-input" id="f-poste" value="${prefill.poste||''}"></div>
+      <div class="form-group full"><label class="form-label">Email *</label><input class="form-input" id="f-email" type="email" value="${prefill.email||''}" placeholder="prenom.nom@dauphine.eu"></div>
+      <div class="form-group"><label class="form-label">Rôle</label>
+        <select class="form-select" id="f-role"><option value="membre" ${prefill.role==='membre'?'selected':''}>Membre</option><option value="admin" ${prefill.role==='admin'?'selected':''}>Admin</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Couleur</label>
+        <select class="form-select" id="f-color">${[['#2563EB','Bleu'],['#059669','Vert'],['#7C3AED','Violet'],['#B45309','Ambre'],['#DC2626','Rouge'],['#6B7280','Gris']].map(([v,l])=>`<option value="${v}" ${prefill.color===v?'selected':''}>${l}</option>`).join('')}</select>
+      </div>
+    </div>`;
+    onSave = () => saveMember(prefill.id);
+  }
+
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('modalSaveBtn').onclick = onSave;
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+// ─── SAVE / EDIT / DELETE ────────────────────────────────────────────────────
+async function saveProspect(id) {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Le nom est requis', true); return; }
+  const data = {
+    name, sector: document.getElementById('f-sector').value,
+    contact: document.getElementById('f-contact').value,
+    email: document.getElementById('f-email').value,
+    phone: document.getElementById('f-phone').value,
+    status: document.getElementById('f-status').value,
+    source: document.getElementById('f-source').value,
+    notes: document.getElementById('f-notes').value,
+    assignee_id: document.getElementById('f-assignee').value,
+    last_action_at: new Date().toISOString()
+  };
+  const { error } = id ? await sb.from('prospects').update(data).eq('id', id) : await sb.from('prospects').insert(data);
+  if (error) { toast('Erreur : ' + error.message, true); return; }
+  toast(id ? 'Prospect mis à jour' : 'Prospect ajouté');
+  closeModal();
+  if (id) showProspect(id); else nav('prospects');
+}
+
+function editProspect(id) {
+  const p = cache.prospects.find(x => x.id === id);
+  if (!p) return;
+  openModal('prospect', { ...p, assignee_id: p.assignee?.id, _editTitle: 'Modifier ' + p.name });
+}
+
+async function deleteProspect(id) {
+  if (!confirm('Supprimer ce prospect ? Cette action est irréversible.')) return;
+  const { error } = await sb.from('prospects').delete().eq('id', id);
+  if (error) { toast('Erreur', true); return; }
+  toast('Prospect supprimé');
+  nav('prospects');
+}
+
+async function saveEvent(id) {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Le nom est requis', true); return; }
+  const data = {
+    name, type: document.getElementById('f-type').value,
+    date: document.getElementById('f-date').value,
+    location: document.getElementById('f-location').value,
+    budget: parseInt(document.getElementById('f-budget').value)||0,
+    attendees: parseInt(document.getElementById('f-attendees').value)||0,
+    description: document.getElementById('f-desc').value,
+    status: 'planned'
+  };
+  const { error } = id ? await sb.from('events').update(data).eq('id', id) : await sb.from('events').insert(data);
+  if (error) { toast('Erreur : ' + error.message, true); return; }
+  toast(id ? 'Événement mis à jour' : 'Événement créé');
+  closeModal(); nav('events');
+}
+
+async function saveSponsor(id) {
+  const prospect_id = document.getElementById('f-prospect').value;
+  if (!prospect_id) { toast('Sélectionne une entreprise', true); return; }
+  const data = {
+    prospect_id, package: document.getElementById('f-package').value,
+    amount: parseInt(document.getElementById('f-amount').value)||0,
+    status: document.getElementById('f-status').value,
+    assignee_id: document.getElementById('f-assignee').value,
+    notes: document.getElementById('f-notes').value
+  };
+  const { error } = id ? await sb.from('sponsors').update(data).eq('id', id) : await sb.from('sponsors').insert(data);
+  if (error) { toast('Erreur : ' + error.message, true); return; }
+  toast(id ? 'Sponsoring mis à jour' : 'Sponsoring ajouté');
+  closeModal(); nav('sponsors');
+}
+
+async function saveMember(id) {
+  const name = document.getElementById('f-name').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  if (!name || !email) { toast('Nom et email requis', true); return; }
+  const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const data = {
+    name, email, initials, poste: document.getElementById('f-poste').value,
+    role: document.getElementById('f-role').value, color: document.getElementById('f-color').value
+  };
+  const { error } = id ? await sb.from('team').update(data).eq('id', id) : await sb.from('team').insert(data);
+  if (error) { toast('Erreur : ' + error.message, true); return; }
+  toast(id ? 'Membre mis à jour' : 'Membre ajouté');
+  closeModal(); nav('team');
+}
+
+function editMember(id) {
+  const m = cache.team.find(x => x.id === id);
+  if (!m) return;
+  openModal('member', { ...m, _editTitle: 'Modifier ' + m.name });
+}
+
+// ─── ACTIONS ────────────────────────────────────────────────────────────────
+function addAction(prospectId) {
+  document.getElementById('modalTitle').textContent = 'Nouvelle action';
+  document.getElementById('modalBody').innerHTML = `
+  <div class="form-group"><label class="form-label">Type d'action</label>
+    <select class="form-select" id="f-action-type">
+      <option>Appel téléphonique</option><option>Email envoyé</option><option>Réunion</option>
+      <option>Proposition envoyée</option><option>Relance</option><option>Autre</option>
+    </select>
+  </div>
+  <div class="form-group" style="margin-top:12px"><label class="form-label">Note</label>
+    <textarea class="form-input" id="f-action-note" rows="3" placeholder="Détails..."></textarea>
+  </div>`;
+  document.getElementById('modalSaveBtn').onclick = async () => {
+    const { error } = await sb.from('actions').insert({
+      prospect_id: prospectId,
+      type: document.getElementById('f-action-type').value,
+      note: document.getElementById('f-action-note').value,
+      author_id: currentUser.id
+    });
+    if (!error) await sb.from('prospects').update({ last_action_at: new Date().toISOString() }).eq('id', prospectId);
+    if (error) { toast('Erreur', true); return; }
+    toast('Action enregistrée');
+    closeModal(); showProspect(prospectId);
+  };
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function changeStatus(id, current) {
+  document.getElementById('modalTitle').textContent = 'Changer le statut';
+  document.getElementById('modalBody').innerHTML = `
+  <div class="form-group"><label class="form-label">Nouveau statut</label>
+    <select class="form-select" id="f-new-status">${Object.entries({new:'Nouveau',contacted:'Contacté',qualified:'Qualifié',negotiation:'Négociation','closed-won':'Signé','closed-lost':'Perdu'}).map(([v,l])=>`<option value="${v}" ${current===v?'selected':''}>${l}</option>`).join('')}</select>
+  </div>`;
+  document.getElementById('modalSaveBtn').onclick = async () => {
+    const status = document.getElementById('f-new-status').value;
+    await sb.from('prospects').update({ status, last_action_at: new Date().toISOString() }).eq('id', id);
+    toast('Statut mis à jour');
+    closeModal(); showProspect(id);
+  };
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+// ─── SEARCH ──────────────────────────────────────────────────────────────────
+function onSearch(q) {
+  if (currentView !== 'prospects') return;
+  if (!q) { renderProspects(document.getElementById('content')); return; }
+  q = q.toLowerCase();
+  const filtered = cache.prospects.filter(p =>
+    p.name?.toLowerCase().includes(q) ||
+    p.contact?.toLowerCase().includes(q) ||
+    p.sector?.toLowerCase().includes(q) ||
+    p.email?.toLowerCase().includes(q)
+  );
+  renderProspects(document.getElementById('content'), filtered);
+}
+</script>
+</body>
+</html>
