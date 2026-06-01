@@ -330,6 +330,11 @@ const APP_PASSWORD = 'spi2025';
           Sponsorings
           <span class="nav-badge" id="badgeSponsors">—</span>
         </a>
+        <a class="nav-item" id="nav-crews" onclick="nav('crews')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Équipages
+          <span class="nav-badge" id="badgeCrews">—</span>
+        </a>
         <div class="nav-section">Gestion</div>
         <a class="nav-item" id="nav-team" onclick="nav('team')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -394,7 +399,7 @@ let currentUser = null;
 let currentView = 'dashboard';
 let currentFilter = 'all';
 let currentSubTab = 'list';
-let cache = { team: [], prospects: [], events: [], sponsors: [], actions: [] };
+let cache = { team: [], prospects: [], events: [], sponsors: [], actions: [], crews: [] };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const statusLabels = {
@@ -513,7 +518,7 @@ function nav(view) {
   const ni = document.getElementById('nav-' + view);
   if (ni) ni.classList.add('active');
 
-  const titles = { dashboard:'Tableau de bord', prospects:'Entreprises & Prospects', events:'Événements', sponsors:'Sponsorings', team:'Équipe' };
+  const titles = { dashboard:'Tableau de bord', prospects:'Entreprises & Prospects', events:'Événements', sponsors:'Sponsorings', crews:'Équipages', team:'Équipe' };
   document.getElementById('topTitle').textContent = titles[view] || view;
 
   const isAdmin = currentUser?.role === 'admin';
@@ -521,6 +526,7 @@ function nav(view) {
     prospects: `<button class="btn btn-primary" onclick="openModal('prospect')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Ajouter</button>`,
     events: `<button class="btn btn-primary" onclick="openModal('event')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Créer</button>`,
     sponsors: `<button class="btn btn-primary" onclick="openModal('sponsor')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Ajouter</button>`,
+    crews: `<button class="btn btn-primary" onclick="openModal('crew')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Ajouter</button>`,
     team: isAdmin ? `<button class="btn btn-primary" onclick="openModal('member')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Inviter</button>` : '',
     dashboard: ''
   };
@@ -538,6 +544,7 @@ async function loadView(view) {
   else if (view === 'prospects') renderProspects(c);
   else if (view === 'events') renderEvents(c);
   else if (view === 'sponsors') renderSponsors(c);
+  else if (view === 'crews') renderCrews(c);
   else if (view === 'team') renderTeam(c);
 }
 
@@ -557,10 +564,16 @@ async function loadCache(view) {
     const r = await sb.from('sponsors').select('*, prospect:prospect_id(*), assignee:assignee_id(*)').order('created_at', { ascending: false });
     cache.sponsors = r.data || [];
   }
+  if (view === 'crews') {
+    const r = await sb.from('crews').select('*').order('name');
+    cache.crews = r.data || [];
+  }
   // Update nav badges
   document.getElementById('badgeProspects').textContent = cache.prospects.length || '—';
   document.getElementById('badgeEvents').textContent = cache.events.length || '—';
   document.getElementById('badgeSponsors').textContent = cache.sponsors.length || '—';
+  const bc = document.getElementById('badgeCrews');
+  if (bc && cache.crews) bc.textContent = cache.crews.length || '—';
 }
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
@@ -859,6 +872,108 @@ function renderSponsors(c) {
 }
 
 // ─── TEAM ────────────────────────────────────────────────────────────────────
+// ─── CREWS (ÉQUIPAGES) ───────────────────────────────────────────────────────
+const crewStatusMap = {
+  contact:{l:'Contact',c:'badge-gray'},
+  sur:{l:'Sûr',c:'badge-green'},
+  probable:{l:'Très probable',c:'badge-blue'},
+  doute:{l:'Doute',c:'badge-amber'},
+  improbable:{l:'Peu probable',c:'badge-red'},
+  refus:{l:'Refus',c:'badge-red'},
+  nouveau:{l:'Nouveau',c:'badge-purple'}
+};
+function crewBadge(s){const m=crewStatusMap[s]||crewStatusMap.contact;return `<span class="badge ${m.c}">${m.l}</span>`;}
+
+let crewFilter = 'all';
+
+function renderCrews(c) {
+  const crews = cache.crews || [];
+  const totalPart = crews.reduce((a,b)=>{const n=parseInt(b.participants);return a+(isNaN(n)?0:n);},0);
+  const responsables = [...new Set(crews.map(x=>x.responsable).filter(Boolean))].sort();
+
+  const filtered = crewFilter === 'all' ? crews : crews.filter(x=>x.responsable===crewFilter);
+
+  // group by responsable
+  const groups = {};
+  filtered.forEach(cr=>{const r=cr.responsable||'Autres';(groups[r]=groups[r]||[]).push(cr);});
+
+  c.innerHTML = `
+  <div class="kpi-row" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+    <div class="stat-card"><div class="stat-label">Équipages suivis</div><div class="stat-value">${crews.length}</div><div class="stat-sub">${responsables.length} responsables</div></div>
+    <div class="stat-card"><div class="stat-label">Participants estimés</div><div class="stat-value">${totalPart}+</div><div class="stat-sub">tous équipages confondus</div></div>
+    <div class="stat-card"><div class="stat-label">Avec bateau</div><div class="stat-value">${crews.filter(x=>x.boat && /oui|ok|good|essaye|skipper/i.test(x.boat)).length}</div><div class="stat-sub">bateau confirmé ou en cours</div></div>
+  </div>
+  <div class="filters-bar">
+    <button class="filter-btn${crewFilter==='all'?' active':''}" onclick="setCrewFilter('all')">Tous (${crews.length})</button>
+    ${responsables.map(r=>`<button class="filter-btn${crewFilter===r?' active':''}" onclick="setCrewFilter('${r.replace(/'/g,"\\'")}')">${r} (${crews.filter(x=>x.responsable===r).length})</button>`).join('')}
+  </div>
+  ${Object.keys(groups).sort().map(resp=>`
+    <div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div class="section-title">${resp}</div>
+        <span class="badge badge-blue">${groups[resp].length} équipage${groups[resp].length>1?'s':''}</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Équipage</th><th>Contact</th><th>Particip.</th><th>Bateau</th><th>Disponibilité</th><th>Commentaire</th></tr></thead>
+          <tbody>
+            ${groups[resp].map(cr=>`<tr onclick="showCrew('${cr.id}')">
+              <td><strong>${cr.name}</strong></td>
+              <td style="color:var(--blue);font-size:12.5px">${cr.contact||'—'}</td>
+              <td style="font-weight:600">${cr.participants||'—'}</td>
+              <td style="font-size:12px;color:var(--text2)">${cr.boat||'—'}</td>
+              <td style="font-size:12px;color:var(--text2);max-width:160px">${cr.availability||'—'}</td>
+              <td style="font-size:12px;color:var(--text3);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cr.comment||'—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('') || '<div class="empty"><p>Aucun équipage</p></div>'}`;
+}
+
+function setCrewFilter(f){ crewFilter = f; renderCrews(document.getElementById('content')); }
+
+async function showCrew(id) {
+  const c = document.getElementById('content');
+  const cr = (cache.crews||[]).find(x=>x.id===id);
+  if (!cr) return;
+  const isAdmin = currentUser?.role === 'admin';
+  c.innerHTML = `
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+    <button class="btn" onclick="nav('crews')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Retour</button>
+    <h1 style="font-size:18px;font-weight:700;flex:1;min-width:0">${cr.name}</h1>
+    <button class="btn" onclick="editCrew('${cr.id}')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Modifier</button>
+    ${isAdmin?`<button class="btn btn-danger" onclick="deleteCrew('${cr.id}')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>`:''}
+  </div>
+  <div class="detail-grid">
+    <div class="detail-section">
+      <div class="detail-section-title">Informations équipage</div>
+      <div class="detail-row"><span class="detail-key">Responsable SPI</span><span class="detail-val">${cr.responsable||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">Contact</span><span class="detail-val" style="color:var(--blue)">${cr.contact||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">Participants</span><span class="detail-val">${cr.participants||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">Bateau</span><span class="detail-val">${cr.boat||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">Disponibilité</span><span class="detail-val">${cr.availability||'—'}</span></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Commentaire</div>
+      <div style="font-size:13px;line-height:1.6;color:var(--text)">${cr.comment||'<span style="color:var(--text3)">Aucun commentaire</span>'}</div>
+    </div>
+  </div>`;
+}
+
+async function deleteCrew(id) {
+  if (!confirm('Supprimer cet équipage ?')) return;
+  const { error } = await sb.from('crews').delete().eq('id', id);
+  if (error) { toast('Erreur', true); return; }
+  toast('Équipage supprimé'); nav('crews');
+}
+
+function editCrew(id) {
+  const cr = (cache.crews||[]).find(x=>x.id===id);
+  if (!cr) return;
+  openModal('crew', { ...cr, _editTitle: 'Modifier ' + cr.name });
+}
+
 function renderTeam(c) {
   c.innerHTML = `<div class="team-grid">${cache.team.map(m=>`
   <div class="team-card">
@@ -877,7 +992,7 @@ function renderTeam(c) {
 
 // ─── MODAL ───────────────────────────────────────────────────────────────────
 function openModal(type, prefill={}) {
-  const titles = { prospect:'Nouvelle entreprise', event:'Nouvel événement', sponsor:'Nouveau sponsoring', member:'Inviter un membre' };
+  const titles = { prospect:'Nouvelle entreprise', event:'Nouvel événement', sponsor:'Nouveau sponsoring', member:'Inviter un membre', crew:'Nouvel équipage' };
   document.getElementById('modalTitle').textContent = prefill._editTitle || titles[type] || 'Nouveau';
   document.getElementById('modalOverlay').classList.add('show');
 
@@ -944,6 +1059,20 @@ function openModal(type, prefill={}) {
       </div>
     </div>`;
     onSave = () => saveMember(prefill.id);
+  } else if (type === 'crew') {
+    const respList = ['Anna','Honorine','Foulques','Anne','Noa','Mehdi','Autre'];
+    body = `<div class="form-grid">
+      <div class="form-group"><label class="form-label">Nom de l'équipage *</label><input class="form-input" id="f-name" value="${prefill.name||''}" placeholder="ex: SPI Barca"></div>
+      <div class="form-group"><label class="form-label">Responsable SPI</label>
+        <select class="form-select" id="f-responsable">${respList.map(r=>`<option ${prefill.responsable===r?'selected':''}>${r}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Contact</label><input class="form-input" id="f-contact" value="${prefill.contact||''}" placeholder="@instagram ou tél"></div>
+      <div class="form-group"><label class="form-label">Nb participants</label><input class="form-input" id="f-participants" value="${prefill.participants||''}" placeholder="ex: 20"></div>
+      <div class="form-group"><label class="form-label">Bateau</label><input class="form-input" id="f-boat" value="${prefill.boat||''}" placeholder="oui / cherche / —"></div>
+      <div class="form-group"><label class="form-label">Disponibilité</label><input class="form-input" id="f-availability" value="${prefill.availability||''}" placeholder="ex: en cours, vacances"></div>
+      <div class="form-group full"><label class="form-label">Commentaire</label><textarea class="form-input" id="f-comment" rows="3">${prefill.comment||''}</textarea></div>
+    </div>`;
+    onSave = () => saveCrew(prefill.id);
   }
 
   document.getElementById('modalBody').innerHTML = body;
@@ -1043,6 +1172,24 @@ function editMember(id) {
   openModal('member', { ...m, _editTitle: 'Modifier ' + m.name });
 }
 
+async function saveCrew(id) {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Le nom est requis', true); return; }
+  const data = {
+    name,
+    responsable: document.getElementById('f-responsable').value,
+    contact: document.getElementById('f-contact').value,
+    participants: document.getElementById('f-participants').value,
+    boat: document.getElementById('f-boat').value,
+    availability: document.getElementById('f-availability').value,
+    comment: document.getElementById('f-comment').value
+  };
+  const { error } = id ? await sb.from('crews').update(data).eq('id', id) : await sb.from('crews').insert(data);
+  if (error) { toast('Erreur : ' + error.message, true); return; }
+  toast(id ? 'Équipage mis à jour' : 'Équipage ajouté');
+  closeModal(); nav('crews');
+}
+
 // ─── ACTIONS ────────────────────────────────────────────────────────────────
 function addAction(prospectId) {
   document.getElementById('modalTitle').textContent = 'Nouvelle action';
@@ -1088,6 +1235,14 @@ function changeStatus(id, current) {
 
 // ─── SEARCH ──────────────────────────────────────────────────────────────────
 function onSearch(q) {
+  if (currentView === 'crews') {
+    const term = (q||'').toLowerCase();
+    const tbodies = document.querySelectorAll('#content tbody tr');
+    tbodies.forEach(tr => {
+      tr.style.display = !term || tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+    });
+    return;
+  }
   if (currentView !== 'prospects') return;
   if (!q) { renderProspects(document.getElementById('content')); return; }
   q = q.toLowerCase();
